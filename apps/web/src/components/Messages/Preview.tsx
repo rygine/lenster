@@ -13,12 +13,12 @@ import { Image } from 'ui';
 
 interface PreviewProps {
   profile: Profile;
-  message: DecodedMessage;
+  message?: DecodedMessage;
   conversationKey: string;
   isSelected: boolean;
 }
 
-const Preview: FC<PreviewProps> = ({ profile, message, conversationKey, isSelected }) => {
+const Preview: FC<PreviewProps> = ({ message, profile, conversationKey, isSelected }) => {
   const router = useRouter();
   const currentProfile = useAppStore((state) => state.currentProfile);
   const address = currentProfile?.ownedBy;
@@ -49,19 +49,19 @@ const Preview: FC<PreviewProps> = ({ profile, message, conversationKey, isSelect
           alt={formatHandle(profile?.handle)}
         />
         <div className="w-full">
-          <div className="flex w-full justify-between space-x-1">
+          <div className="flex w-full items-center justify-between space-x-1">
             <div className="flex max-w-sm items-center gap-1">
               <div className="text-md line-clamp-1">{profile?.name ?? formatHandle(profile.handle)}</div>
               {isVerified(profile?.id) && <BadgeCheckIcon className="text-brand h-4 w-4 min-w-fit" />}
             </div>
-            {message.sent && (
+            {message?.sent && (
               <span className="lt-text-gray-500 min-w-fit pt-0.5 text-xs" title={formatTime(message.sent)}>
                 {getTimeFromNow(message.sent)}
               </span>
             )}
           </div>
           <span className="lt-text-gray-500 line-clamp-1 break-all text-sm">
-            {address === message.senderAddress && 'You: '} {message.content}
+            {address === message?.senderAddress && 'You: '} {message?.content}
           </span>
         </div>
       </div>
