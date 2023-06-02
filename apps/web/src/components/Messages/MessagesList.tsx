@@ -1,4 +1,9 @@
-import { EmojiSadIcon } from '@heroicons/react/outline';
+import type {
+  FailedMessage,
+  PendingMessage
+} from '@components/utils/hooks/useSendOptimisticMessage';
+import { ClockIcon, EmojiSadIcon } from '@heroicons/react/outline';
+import { CheckIcon, ExclamationIcon } from '@heroicons/react/solid';
 import type { Profile } from '@lenster/lens';
 import formatHandle from '@lenster/lib/formatHandle';
 import getAvatar from '@lenster/lib/getAvatar';
@@ -24,10 +29,16 @@ const formatDate = (d?: Date) => dayjs(d).format('MMMM D, YYYY');
 
 interface MessageTileProps {
   url?: string;
-  message: DecodedMessage;
+  message: DecodedMessage | PendingMessage | FailedMessage;
   profile?: Profile;
   currentProfile?: Profile | null;
 }
+
+const isQueueMessage = (
+  message: DecodedMessage | PendingMessage | FailedMessage
+): message is PendingMessage | FailedMessage => {
+  return 'status' in message;
+};
 
 const MessageTile: FC<MessageTileProps> = ({
   url,
@@ -36,6 +47,20 @@ const MessageTile: FC<MessageTileProps> = ({
   currentProfile
 }) => {
   const address = currentProfile?.ownedBy;
+
+  let sentIcon: JSX.Element | null = null;
+  if (isQueueMessage(message)) {
+    switch (message.status) {
+      case 'failed':
+        sentIcon = <ExclamationIcon width={16} height={16} />;
+        break;
+      case 'pending':
+        sentIcon = <ClockIcon width={16} height={16} />;
+        break;
+    }
+  } else {
+    sentIcon = <CheckIcon width={16} height={16} />;
+  }
 
   return (
     <div
@@ -76,9 +101,10 @@ const MessageTile: FC<MessageTileProps> = ({
       </div>
       <div className={clsx(address !== message.senderAddress ? 'ml-12' : '')}>
         <span
-          className="place-self-end text-xs text-gray-400"
+          className="flex items-center gap-1 place-self-end text-xs text-gray-400"
           title={formatTime(message.sent)}
         >
+          {sentIcon}
           {dayjs(message.sent).fromNow()}
         </span>
       </div>
@@ -141,7 +167,7 @@ const LoadingMore: FC = () => (
 
 interface MessageListProps {
   conversationKey?: string;
-  messages: DecodedMessage[];
+  messages: (DecodedMessage | PendingMessage | FailedMessage)[];
   fetchNextMessages: () => void;
   profile?: Profile;
   currentProfile?: Profile | null;
@@ -180,7 +206,7 @@ const MessagesList: FC<MessageListProps> = ({
         <div className="flex h-full w-full flex-col-reverse overflow-y-hidden">
           {missingXmtpAuth && <MissingXmtpAuth />}
           <span className="flex flex-col-reverse overflow-y-auto overflow-x-hidden">
-            {messages?.map((msg: DecodedMessage, index) => {
+            {messages?.map((msg, index) => {
               const dateHasChanged = lastMessageDate
                 ? !isOnSameDay(lastMessageDate, msg.sent)
                 : false;

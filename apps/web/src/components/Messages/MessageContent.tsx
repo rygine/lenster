@@ -1,4 +1,8 @@
 import Markup from '@components/Shared/Markup';
+import type {
+  FailedMessage,
+  PendingMessage
+} from '@components/utils/hooks/useSendOptimisticMessage';
 import type { Profile } from '@lenster/lens';
 import type { DecodedMessage } from '@xmtp/xmtp-js';
 import type { FC } from 'react';
@@ -7,7 +11,7 @@ import { ContentTypeRemoteAttachment } from 'xmtp-content-type-remote-attachment
 import RemoteAttachmentPreview from './RemoteAttachmentPreview';
 
 interface MessageContentProps {
-  message: DecodedMessage;
+  message: DecodedMessage | PendingMessage | FailedMessage;
   profile: Profile | undefined;
   sentByMe: boolean;
 }

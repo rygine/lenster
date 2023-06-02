@@ -3,7 +3,7 @@ import MessageHeader from '@components/Messages/MessageHeader';
 import Loader from '@components/Shared/Loader';
 import useGetMessages from '@components/utils/hooks/useGetMessages';
 import { useGetProfile } from '@components/utils/hooks/useMessageDb';
-import useSendMessage from '@components/utils/hooks/useSendMessage';
+import useSendOptimisticMessage from '@components/utils/hooks/useSendOptimisticMessage';
 import useStreamMessages from '@components/utils/hooks/useStreamMessages';
 import { APP_NAME } from '@lenster/data/constants';
 import formatHandle from '@lenster/lib/formatHandle';
@@ -43,7 +43,8 @@ const Message: FC<MessageProps> = ({ conversationKey }) => {
     endTime.get(conversationKey)
   );
   useStreamMessages(conversationKey, selectedConversation);
-  const { missingXmtpAuth, sendMessage } = useSendMessage(conversationKey);
+  const { missingXmtpAuth, sendMessage, queue } =
+    useSendOptimisticMessage(conversationKey);
 
   const fetchNextMessages = useCallback(() => {
     if (hasMore && Array.isArray(messages) && messages.length > 0) {
@@ -93,7 +94,7 @@ const Message: FC<MessageProps> = ({ conversationKey }) => {
                 currentProfile={currentProfile}
                 profile={profile}
                 fetchNextMessages={fetchNextMessages}
-                messages={messages ?? []}
+                messages={[...queue, ...(messages ?? [])]}
                 hasMore={hasMore}
                 missingXmtpAuth={missingXmtpAuth ?? false}
               />

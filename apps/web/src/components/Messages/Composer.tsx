@@ -1,3 +1,8 @@
+import type {
+  AllowedContent,
+  SendMessageContent,
+  SendMessageOptions
+} from '@components/utils/hooks/useSendOptimisticMessage';
 import { ArrowRightIcon, PhotographIcon } from '@heroicons/react/outline';
 import { XIcon } from '@heroicons/react/solid';
 import { MIN_WIDTH_DESKTOP } from '@lenster/data/constants';
@@ -18,10 +23,7 @@ import {
 import { useMessagePersistStore } from 'src/store/message';
 import { MESSAGES } from 'src/tracking';
 import { useUpdateEffect, useWindowSize } from 'usehooks-ts';
-import type {
-  Attachment as TAttachment,
-  RemoteAttachment
-} from 'xmtp-content-type-remote-attachment';
+import type { Attachment as TAttachment } from 'xmtp-content-type-remote-attachment';
 import {
   AttachmentCodec,
   ContentTypeRemoteAttachment,
@@ -30,15 +32,15 @@ import {
 
 import Attachment from './AttachmentView';
 
-interface ComposerProps {
-  sendMessage: (
-    content: string | RemoteAttachment,
+type ComposerProps = {
+  sendMessage: <T extends AllowedContent = string>(
+    content: SendMessageContent<T>,
     contentType: ContentTypeId,
-    fallback?: string
+    options?: SendMessageOptions
   ) => Promise<boolean>;
   conversationKey: string;
   disabledInput: boolean;
-}
+};
 
 interface AttachmentPreviewProps {
   onDismiss: () => void;
@@ -99,42 +101,44 @@ const Composer: FC<ComposerProps> = ({
     setSending(true);
 
     if (attachment) {
-      const encryptedEncodedContent =
-        await RemoteAttachmentCodec.encodeEncrypted(
-          attachment,
-          new AttachmentCodec()
-        );
-
-      const file = new File(
-        [encryptedEncodedContent.payload],
-        'XMTPEncryptedContent',
-        {
-          type: attachment.mimeType
-        }
-      );
-
-      const uploadedAttachment = await uploadFileToIPFS(file);
-      const url = sanitizeDStorageUrl(uploadedAttachment.original.url);
-
-      const remoteAttachment: RemoteAttachment = {
-        url,
-        contentDigest: encryptedEncodedContent.digest,
-        salt: encryptedEncodedContent.salt,
-        nonce: encryptedEncodedContent.nonce,
-        secret: encryptedEncodedContent.secret,
-        scheme: 'https://',
-        filename: attachment.filename,
-        contentLength: attachment.data.byteLength
-      };
-
-      // Since we're sending this, we should always load it
-      addLoadedAttachmentURL(url);
-      cacheAttachment(url, attachment);
-
       const sentAttachment = await sendMessage(
-        remoteAttachment,
+        async () => {
+          const encryptedEncodedContent =
+            await RemoteAttachmentCodec.encodeEncrypted(
+              attachment,
+              new AttachmentCodec()
+            );
+
+          const file = new File(
+            [encryptedEncodedContent.payload],
+            'XMTPEncryptedContent',
+            {
+              type: attachment.mimeType
+            }
+          );
+
+          const uploadedAttachment = await uploadFileToIPFS(file);
+          const url = sanitizeDStorageUrl(uploadedAttachment.original.url);
+
+          // Since we're sending this, we should always load it
+          addLoadedAttachmentURL(url);
+          cacheAttachment(url, attachment);
+
+          return {
+            url,
+            contentDigest: encryptedEncodedContent.digest,
+            salt: encryptedEncodedContent.salt,
+            nonce: encryptedEncodedContent.nonce,
+            secret: encryptedEncodedContent.secret,
+            scheme: 'https://',
+            filename: attachment.filename,
+            contentLength: attachment.data.byteLength
+          };
+        },
         ContentTypeRemoteAttachment,
-        `[Attachment] Cannot display "${attachment.filename}". This app does not support attachments yet.`
+        {
+          fallback: `[Attachment] Cannot display "${attachment.filename}". This app does not support attachments yet.`
+        }
       );
 
       if (sentAttachment) {
